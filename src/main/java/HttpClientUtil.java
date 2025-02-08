@@ -21,7 +21,16 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.repository.init.ResourceReader;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
 import java.net.URI;
@@ -369,6 +378,36 @@ public class HttpClientUtil {
             }
         }
         return wavByte;
+    }
+
+    public static byte[] doPostRestTemplateByte(String url, Map<String, String> paramMap, String promptWav) throws IOException {
+        // 创建配置化的RestTemplate
+        RestTemplate restTemplate = new RestTemplateBuilder()
+                .rootUri(url)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
+                .build();
+
+        // 创建multipart/form-data请求体
+        LinkedMultiValueMap<String, Object> params = new LinkedMultiValueMap<>();
+
+        // 添加表单参数
+        if (paramMap != null && !paramMap.isEmpty()) {
+            for (Map.Entry<String, String> entry : paramMap.entrySet()) {
+                params.add(entry.getKey(), entry.getValue());
+            }
+        }
+
+        // 添加音频文件
+        if (promptWav != null) {
+            Resource resource = new ClassPathResource(promptWav);
+            params.add("prompt_wav", resource);
+        }
+
+        // 发送POST请求并获取响应
+        ResponseEntity<byte[]> response = restTemplate.postForEntity(url, params, byte[].class);
+
+        // 返回响应体字节数组
+        return response.getBody();
     }
 
     private static RequestConfig builderRequestConfig() {
